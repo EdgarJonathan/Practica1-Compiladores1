@@ -1,0 +1,326 @@
+/*----------------------1ra Area: Codigo de Usuario ---------------------------------------------*/
+//------------->Importaciones, paquetes
+
+package Analisis;
+import java_cup.runtime.Symbol;
+import java.util.LinkedList;
+import Logica.*;
+
+//-------------->Codigo para el parser, varibles, metodos
+
+parser code
+{:
+
+	public static LinkedList<Variable> Variables = new LinkedList<Variable>(); 
+
+	public  GraficaL graficaL = new GraficaL();
+	public  GraficaB graficaB = new GraficaB();
+	public 	Linea 	 line = new Linea();
+	public Galeria gal = new Galeria();
+ 
+
+     public static LinkedList<TError> tablaES = new LinkedList<TError>();
+    //Metodo al que se llama automaticamente ante algun error sintactico
+    public void syntax_error(Symbol s)
+    {
+        String lexema = s.value.toString();
+        int fila=s.right;
+        int col = s.left;
+
+        System.out.println("!!!!!!Error sintactico recuperado!!!!!!!!");
+        System.out.println("\t\tLexema: "+lexema);
+        System.out.println("\t\tFila: "+fila);
+        System.out.println("\t\tColumna: "+col);
+        
+        TError datos = new TError(lexema,fila,col,"Error sintactico","El caracter no esperado");
+        tablaES.add(datos);
+
+    }
+
+
+    //Metodo al que se llama en el momento  en que ya no  es posible una recuperacion de errores
+    public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception{ 
+        
+        String lexema = s.value.toString();
+        int fila = s.right;
+        int col = s.left;
+        
+        System.out.println("!!!!!!Error sintactico, panic mode!!!!!!!!");
+        System.out.println("\t\tLexema: "+lexema);
+        System.out.println("\t\tFila: "+fila);
+        System.out.println("\t\tColumna: "+col);
+
+        TError datos = new TError(lexema,fila,col,"Error sintactico","El caracter no esperado");
+        tablaES.add(datos);
+
+    }
+:}
+
+//------------>Codigo para las acciones gramaticales 
+action code{:
+
+
+
+:}
+
+
+/*----------------------2da Area: Area de Declaraciones ---------------------------------------------*/
+
+//------------------------------------> declaracion de terminales
+
+//simbolos
+terminal String dospuntos,ptcoma ,llaveA,llaveC,igual,corcheteA,corcheteC,interrogacionC,interrogacionA; 
+terminal String parA,parC,coma;
+
+//palabras reservadas
+terminal String tkstring,tkint,defGlobal,id,titulo,titulox,tituloy,ejex,ejey,puntosxy;
+terminal String graficabarras,graficalinea,nombre,color,grosor,puntos,defxyline,galeria;
+
+//expresiones aritmeticas
+terminal String suma,resta,por,div;
+
+//expresiones regulares 
+terminal String cadena,entero,tk_idedntificador;
+
+//colores
+terminal String colorrojo,coloramarillo,colornaranja,colorazul,colornegro,colorverde;                      
+
+
+
+//------------------------------>declaracion de no terminales
+//general
+non terminal String INICIO,DEFINIRVAR,GRAFICA,GALERIA,GRAFICAB,GRAFICAL;
+//para la definicio de variables 
+non terminal LinkedList<Variable>  CUERPOVAR;
+non terminal Variable C_VAR ;
+ 
+//para la grafica de barras
+non terminal String CUERPOB,C_BARRAS,ID,TITULO,TITULOX,TITULOY;
+//PARA Los string numeros y  listas de numero listas de string  y listas de puntos
+non terminal String VALOR_N,OPERACION,IDENTIFICADOR;
+non terminal Integer VALOR_NUM;
+non terminal LinkedList<Integer> LISTA_NUM;
+non terminal LinkedList<String>	 LISTA_N;
+non terminal LinkedList<Punto>	 LISTA_P;
+non terminal Punto PUNTO;
+non terminal Galeria LISTA_G;
+
+//para grafica de linea 
+non terminal String CUERPOL,C_LINEAS,DEFINIRXY,CUERPOXY,C_XY,C_COLOR;
+//PARA LA GALERIA
+non terminal LinkedList<Galeria> CUERPOG;
+
+//------------>precendencia de menor a mayor
+precedence left suma,resta;
+precedence left por,div;
+
+start with INICIO;
+/*----------------------3ra Area: Reglas Semanticas ---------------------------------------------*/
+INICIO ::= DEFINIRVAR GRAFICA GALERIA
+        | GRAFICA GALERIA; 
+
+GRAFICA ::= GRAFICA GRAFICAB
+        |   GRAFICA GRAFICAL
+        |   GRAFICAB
+        |   GRAFICAL;
+
+
+//-------------------------------Definicion de variables ----------------------
+
+DEFINIRVAR ::= defGlobal llaveA CUERPOVAR llaveC;
+
+CUERPOVAR ::= CUERPOVAR C_VAR:a
+			{: 
+				Variables.add(a);		
+			:}
+            | C_VAR:a
+            {:
+				Variables.add(a);	
+            :};
+
+C_VAR ::= tkint:a IDENTIFICADOR:b igual OPERACION:c ptcoma
+	      {:
+		 	Variable  var = new Variable(a,b, Integer.parseInt(c));
+				RESULT =var;
+		  :}
+        | tkstring:a IDENTIFICADOR:b igual cadena:c ptcoma
+          {: 
+    			Variable  var = new Variable(a,b,c);
+				RESULT=var;
+		  :};
+
+
+//-------------------------------Definicion de grafica de barras ----------------------
+GRAFICAB ::= graficabarras llaveA CUERPOB llaveC {: Contenedor.GBarras.add(graficaB); graficaB = new GraficaB(); :};
+
+CUERPOB  ::= CUERPOB C_BARRAS
+           | C_BARRAS;
+
+C_BARRAS ::= ID:a{: graficaB.id=a; :}
+            | TITULO:a{:graficaB.titulo =a; :}
+            | ejex dospuntos corcheteA LISTA_N:a corcheteC ptcoma{:graficaB.ejex=a; :}
+            | ejey dospuntos corcheteA LISTA_NUM:a corcheteC ptcoma{:graficaB.ejey=a; :}
+            | TITULOX:a{:graficaB.titulox=a; :}
+            | TITULOY:a{:graficaB.tituloy=a; :}
+            | puntosxy dospuntos corcheteA LISTA_P:a corcheteC ptcoma
+            	{:
+						graficaB.puntos =a;
+				:};
+
+
+//-------------------------------Definicion de grafica de lineas ----------------------         
+GRAFICAL ::= graficalinea llaveA CUERPOL llaveC{:Contenedor.GLineas.add(graficaL); graficaL = new GraficaL(); :};
+
+CUERPOL ::= CUERPOL C_LINEAS
+          | C_LINEAS;
+
+C_LINEAS ::=  ID:a 		{:graficaL.id     =a;:}
+            | TITULO:a 	{:graficaL.titulo =a;:}
+            | TITULOX:a {:graficaL.titulox=a;:}
+            | TITULOY:a {:graficaL.tituloy=a;:}
+            | DEFINIRXY;
+
+DEFINIRXY ::= defxyline interrogacionA CUERPOXY interrogacionC{: graficaL.lineas.add(line); line = new Linea(); :};
+
+CUERPOXY ::= CUERPOXY C_XY
+           | C_XY;
+
+C_XY ::= nombre dospuntos VALOR_N:a ptcoma{: line.nombre =a;:}
+        |color dospuntos C_COLOR:a ptcoma{:line.color=a; :}
+        |grosor dospuntos VALOR_NUM:a ptcoma{:line.grosor=a; :}
+        |puntos dospuntos corcheteA LISTA_P:a corcheteC ptcoma{: line.puntos = a; :};
+
+
+C_COLOR ::= coloramarillo: a {: RESULT = a.replace("\"", ""); :}
+        |   colorazul: a {: RESULT = a.replace("\"", ""); :}
+        |   colornaranja: a {: RESULT = a.replace("\"", ""); :}
+        |   colornegro: a {: RESULT = a.replace("\"", ""); :}
+        |   colorrojo: a {: RESULT = a.replace("\"", ""); :}
+        |   colorverde: a {: RESULT = a.replace("\"", ""); :};      
+
+//-------------------------------Definicion de galeria ---------------------- 
+GALERIA ::=  galeria llaveA CUERPOG:a llaveC{:Contenedor.GGaleria =a; :};
+
+
+CUERPOG ::= CUERPOG:a LISTA_G:b
+			{:
+				 RESULT = a; RESULT.add(b);		
+			 :}
+		|	LISTA_G:a {:
+				 RESULT = new LinkedList<Galeria>(); RESULT.add(a);
+			 :};
+		
+
+
+LISTA_G ::= galeria parA LISTA_N:a parC ptcoma{:RESULT = new Galeria(a.get(0),a);:};
+
+//--------------------------------Adicionales -----------------------------
+
+
+LISTA_N ::= LISTA_N:a coma VALOR_N:b
+			{:
+				 RESULT = a; RESULT.add(b);		
+			 :}
+          | VALOR_N:a
+          	{:
+				 RESULT = new LinkedList<String>(); RESULT.add(a);
+			 :};
+
+LISTA_NUM ::= LISTA_NUM:a coma VALOR_NUM:b
+			  {:
+				 RESULT = a; RESULT.add(b);		
+			  :}
+            | VALOR_NUM:a
+              {:
+				 RESULT = new LinkedList<Integer>(); RESULT.add(a);
+			  :};
+      
+
+LISTA_P ::= LISTA_P:a coma PUNTO:b
+			 {:
+				 RESULT = a; RESULT.add(b);		
+			  :}
+        |   PUNTO:a
+        {:
+				 RESULT = new LinkedList<Punto>(); RESULT.add(a);
+			  :};
+
+PUNTO ::= llaveA VALOR_NUM:a coma VALOR_NUM:b llaveC
+		{:
+			RESULT= new Punto(a,b);
+		:};
+
+ID ::= id dospuntos VALOR_N:a ptcoma{:RESULT =a; :};
+TITULO ::= titulo dospuntos VALOR_N:a ptcoma{:RESULT =a; :};
+TITULOX ::= titulox dospuntos VALOR_N:a ptcoma{:RESULT =a; :};
+TITULOY ::= tituloy dospuntos VALOR_N:a ptcoma{:RESULT =a; :};
+
+//arreglar el token id 
+
+VALOR_N ::= cadena: a {: RESULT = a.replace("\"", ""); :}
+        | IDENTIFICADOR: a {: RESULT = a; :};      
+
+VALOR_NUM ::= OPERACION:a
+				{:
+					RESULT = Integer.parseInt(a);					
+				:}
+    	| IDENTIFICADOR:a
+    			{:
+					RESULT = Integer.parseInt(a);
+				:};
+    	
+
+IDENTIFICADOR::= tk_idedntificador:a 
+				{:
+					String resultado =a;
+							for (int i = 0; i < Variables.size(); i++) {
+								Variable var = Variables.get(i);
+								
+								if(var.nombreVariable.equals(a))
+								{
+									if(var.valorString.equals("NULL"))
+									{
+										resultado = Integer.toString(var.ValorEntero);
+										break;
+									}else
+									{
+										resultado = var.valorString;
+										break;
+									}	
+								}	
+								
+							}
+
+					RESULT=resultado;
+
+				:};
+
+
+OPERACION ::= OPERACION:a suma OPERACION:b{:int num1 = Integer.parseInt(a);
+											int num2 =  Integer.parseInt(b);
+											
+											int divi = num1+num2;
+											RESULT = Integer.toString(divi);		
+            								:}
+            | OPERACION:a resta OPERACION:b{:int num1 = Integer.parseInt(a);
+											int num2 =  Integer.parseInt(b);
+											
+											int divi = num1-num2;
+											RESULT = Integer.toString(divi);		
+            								:}
+            | OPERACION:a  por OPERACION:b{:int num1 = Integer.parseInt(a);
+											int num2 =  Integer.parseInt(b);
+											
+											int divi = num1*num2;
+											RESULT = Integer.toString(divi);		
+            								:}
+            | OPERACION:a div OPERACION:b {:int num1 = Integer.parseInt(a);
+											int num2 =  Integer.parseInt(b);
+											
+											int divi = num1/num2;
+											RESULT = Integer.toString(divi);		
+            								:}
+            | parA OPERACION:a {: RESULT =a; :} parC
+            | entero:a {: RESULT =a;:};
+
+
